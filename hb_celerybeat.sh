@@ -6,8 +6,8 @@ if [[ $(hostname) != "rbot2" ]]; then
     exit 1
 fi
 
-# SSH into rbot1 and check the status of celerybeat.service
-STATUS=$(ssh pi@rbot1 "systemctl is-active celerybeat.service" 2>/dev/null)
+# SSH into rbot1 with a 10-second timeout and check the status of celerybeat.service
+STATUS=$(ssh -o ConnectTimeout=10 pi@rbot1 "systemctl is-active celerybeat.service" 2>/dev/null)
 
 # Check the status of celerybeat.service on rbot2
 LOCAL_STATUS=$(systemctl is-active celerybeat.service)
