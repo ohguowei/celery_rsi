@@ -16,15 +16,7 @@ from oandapyV20.endpoints.trades import TradesList, TradeClose
 from datetime import datetime
 import datetime
 
-#access_token = "c33734921cd0b7b68c721fc18e2019c2-8cfd11c75b7df0c81301e2cf58846540"
-#accountID = "001-003-255162-003"
-#environments='live'
-#client = oandapyV20.API(access_token=access_token, environment=environments)
-
 Ggranularity = 'H1'
-#currencies = ["AUD_USD"]
-# 9300/8*13.5
-#lot_size = 15700
 from celery import Celery
 
 app = Celery('celery_rsi')
