@@ -35,3 +35,4 @@ if [[ "$CURRENT_COMMIT" != $(git rev-parse HEAD) || -n "$LOCAL_CHANGES" ]]; then
         fi
     fi
 fi
+

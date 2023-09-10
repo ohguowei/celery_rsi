@@ -29,7 +29,11 @@ if [[ "$CURRENT_COMMIT" != $(git rev-parse HEAD) || -n "$LOCAL_CHANGES" ]]; then
     # If the hostname is rbot1 or rbot2 and celery_config.py has changed
     if [[ "$HOSTNAME" == "rbot1" || "$HOSTNAME" == "rbot2" ]]; then
         # Check if celery_config.py is changed and if celerybeat.service is running
+<<<<<<< HEAD
         if (echo "$LOCAL_CHANGES" | grep "celery_config.py" || git diff --name-only $CURRENT_COMMIT | grep "celery_config.py") && systemctl is-active --quiet                                                                                                                                                                 celerybeat.service; then
+=======
+        if (echo "$LOCAL_CHANGES" | grep "celery_config.py" || git diff --name-only $CURRENT_COMMIT | grep "celery_config.py") && systemctl is-active --quiet celerybeat.service; then
+>>>>>>> 247c8f2 (Resolved merge conflicts)
             # Restart the celerybeat.service
             sudo systemctl restart celerybeat.service
         fi

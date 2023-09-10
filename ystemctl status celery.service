@@ -1,0 +1,23 @@
+[0;1;32m*[0m celery.service - Celery Worker Service
+     Loaded: loaded (/etc/systemd/system/celery.service; disabled; vendor preset: enabled)
+     Active: [0;1;32mactive (running)[0m since Sun 2023-09-03 16:29:26 +08; 17s ago
+   Main PID: 1573 (celery)
+      Tasks: 5 (limit: 407)
+        CPU: 5.380s
+     CGroup: /system.slice/celery.service
+             |-1573 /home/pi/myenv/bin/python3 /home/pi/myenv/bin/celery -A tasks worker --loglevel=info
+             |-1576 /home/pi/myenv/bin/python3 /home/pi/myenv/bin/celery -A tasks worker --loglevel=info
+             |-1577 /home/pi/myenv/bin/python3 /home/pi/myenv/bin/celery -A tasks worker --loglevel=info
+             |-1578 /home/pi/myenv/bin/python3 /home/pi/myenv/bin/celery -A tasks worker --loglevel=info
+             `-1579 /home/pi/myenv/bin/python3 /home/pi/myenv/bin/celery -A tasks worker --loglevel=info
+
+Sep 03 16:29:31 rbotz1 celery[1573]: [2023-09-03 16:29:31,812: INFO/MainProcess] Connected to amqp://rusr:**@rbot2:5672//
+Sep 03 16:29:31 rbotz1 celery[1573]: [2023-09-03 16:29:31,815: WARNING/MainProcess] /home/pi/myenv/lib/python3.9/site-packages/celery/worker/consumer/consumer.py:498: CPendingDeprecationWarning: The broker_connection_retry configuration setting will no longer determine
+Sep 03 16:29:31 rbotz1 celery[1573]: whether broker connection retries are made during startup in Celery 6.0 and above.
+Sep 03 16:29:31 rbotz1 celery[1573]: If you wish to retain the existing behavior for retrying connections on startup,
+Sep 03 16:29:31 rbotz1 celery[1573]: you should set broker_connection_retry_on_startup to True.
+Sep 03 16:29:31 rbotz1 celery[1573]:   warnings.warn(
+Sep 03 16:29:31 rbotz1 celery[1573]: [2023-09-03 16:29:31,859: INFO/MainProcess] mingle: searching for neighbors
+Sep 03 16:29:33 rbotz1 celery[1573]: [2023-09-03 16:29:33,056: INFO/MainProcess] mingle: sync with 1 nodes
+Sep 03 16:29:33 rbotz1 celery[1573]: [2023-09-03 16:29:33,057: INFO/MainProcess] mingle: sync complete
+Sep 03 16:29:33 rbotz1 celery[1573]: [2023-09-03 16:29:33,290: INFO/MainProcess] celery@rbotz1 ready.
