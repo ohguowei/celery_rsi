@@ -24,7 +24,7 @@ app.config_from_object('celery_config')
 
 @app.task
 def close_position(client, account_id, trade_id):
-    # Endpoint to close the trade
+    # Endpoint to close the trade test
     close_trade_endpoint = TradeClose(account_id, trade_id)
 
     # Close the trade
