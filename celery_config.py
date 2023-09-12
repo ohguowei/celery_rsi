@@ -39,7 +39,7 @@ for bot in bots:
     }
     beat_schedule[f'run_{bot_name}_saturday'] = {
         'task': 'celery_rsi.run_autotrade',
-        'schedule': crontab(minute=48, hour='0-23', day_of_week='sat-sun'),
+        'schedule': crontab(minute=0, hour='0-4', day_of_week='sat'),
         'args': (bot["access_token"], bot["accountID"], bot["environment"], bot["currencies"], bot["lot_size"], bot["weight"]),
     }
     beat_schedule[f'{bot_name}_close_monday'] = {
@@ -54,7 +54,7 @@ for bot in bots:
     }
     beat_schedule[f'{bot_name}_close_saturday'] = {
         'task': 'celery_close.close_positions',
-        'schedule': crontab(minute='*', hour='0-23', day_of_week='sat-sun'),
+        'schedule': crontab(minute='*', hour='0-5', day_of_week='sat'),
         'args': (bot["accountID"], bot["access_token"], bot["profit"]),
     } 
 
