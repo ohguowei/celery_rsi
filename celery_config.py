@@ -8,7 +8,7 @@ broker_url = [
 ]
 
 result_backend = 'rpc://'
-imports = ('celery_rsi', 'celery_close')
+imports = ('celery_rsi', 'celery_close','celery_rsi_new')
 accept_content = ['json']
 task_serializer = 'json'
 result_serializer = 'json'
