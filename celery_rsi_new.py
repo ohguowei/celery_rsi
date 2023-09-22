@@ -5,7 +5,7 @@ import numpy as np
 import concurrent.futures
 from oandapyV20.endpoints.pricing import PricingInfo
 import pandas_ta as ta
-import datetime import datetime
+from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
 from celery import Celery
 import logging
