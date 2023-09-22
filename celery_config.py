@@ -25,7 +25,7 @@ bots = [
  #   {"name": "bot2_USDCHF","accountID": "001-003-255162-004","access_token": "c33734921cd0b7b68c721fc18e2019c2-8cfd11c75b7df0c81301e2cf58846540","currencies": ["USD_CHF"],"lot_size": 10000,"environment": "live","weight": 11,"profit": 100},
 #    {"name": "bot3_AUDSGD","accountID": "001-003-255162-003","access_token": "c33734921cd0b7b68c721fc18e2019c2-8cfd11c75b7df0c81301e2cf58846540","currencies": ["AUD_SGD"],"lot_size": 11250,"environment": "live","weight": 11,"profit": 100},  
 #    {"name": "botgx","accountID": "001-003-134550-004","access_token": "6ff3785ec0bf8e9d3779a70ad70437e8-90b43db3853c48c04ac9a19d395fbe08","currencies": ["AUD_SGD","AUD_USD"],"lot_size": 142,"environment": "live","weight": 11,"profit": 2.6},    
-    {"name": "bot_t","accountID": ""101-001-26348919-001"","access_token": "68ff286dfb6bc058031e66ddcdc72d64-138d97e64d2976820a19a4b179cdcf09","currencies": ["AUD_USD","USD_CHF","AUD_SGD"],"lot_size": 11250,"environment": "practice","weight": 11,"profit": 100},
+    {"name": "bot_t","accountID": "101-001-26348919-001","access_token": "68ff286dfb6bc058031e66ddcdc72d64-138d97e64d2976820a19a4b179cdcf09","currencies": ["AUD_USD","USD_CHF","AUD_SGD"],"lot_size": 11250,"environment": "practice","weight": 11,"profit": 100},
 ]
 
 # Dynamically generate beat_schedule entries based on bot configurations
