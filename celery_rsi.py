@@ -5,34 +5,35 @@ import numpy as np
 import concurrent.futures
 from oandapyV20.endpoints.pricing import PricingInfo
 import pandas_ta as ta
+from datetime import datetime
+from concurrent.futures import ThreadPoolExecutor
+from celery import Celery
+import logging
+
 import oandapyV20
-from oandapyV20.exceptions import V20Error
-from oandapyV20.endpoints.orders import OrderCreate
 import oandapyV20.endpoints.instruments as instruments
 import oandapyV20.endpoints.positions as positions
-from oandapyV20.contrib.requests import PositionCloseRequest
 from oandapyV20.endpoints.positions import PositionDetails
+from oandapyV20.endpoints.trades import TradesList
+from oandapyV20.exceptions import V20Error
+from oandapyV20.endpoints.orders import OrderCreate
+from oandapyV20.contrib.requests import PositionCloseRequest
 from oandapyV20.endpoints.trades import TradesList, TradeClose
-from datetime import datetime
-import datetime
+
+
+# Initialize logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 Ggranularity = 'H1'
-from celery import Celery
 
 app = Celery('celery_rsi')
 app.config_from_object('celery_config')
 
-@app.task
 def close_position(client, account_id, trade_id):
-    # Endpoint to close the trade test
     close_trade_endpoint = TradeClose(account_id, trade_id)
-
-    # Close the trade
-    try:
-        response = client.request(close_trade_endpoint)
-        print(f"Successfully closed trade {trade_id}")
-    except V20Error as e:
-        print(f"Error closing trade: {e}")
+    api_call(client, close_trade_endpoint)
+    logger.info(f"Successfully closed trade {trade_id}")
 
 def close_all_positions(account_id, access_token, environment, instrument_to_close):
     # Create a client instance   
@@ -46,9 +47,6 @@ def close_all_positions(account_id, access_token, environment, instrument_to_clo
         # If the trade's instrument matches the specified instrument
         if trade["instrument"] == instrument_to_close:
             close_position(client, account_id, trade["id"])
-
-
-
 
 def trade_signal(client, signal, currency, accountID, lot_size):
     current_o_trade = check_num_trades(client, accountID, currency)
@@ -157,54 +155,34 @@ def get_historical_data(client, instrument, count):
     df1['close'] = pd.to_numeric(df1['close'])
     return df1
 
-
-def rsi_strategy(df):
+def rsi_strategy(df, bars_needed):
+    # Calculate RSI
     df['rsi'] = df.ta.rsi(length=4)
-
-    # Check if RSI is below 30 (buy signal)
-    if df['rsi'].iloc[-1] <= 30:
+    
+    # Check if the last 'bars_needed' RSI values are below 30 (buy signal)
+    if all(df['rsi'].iloc[-bars_needed:] <= 30):
         return 'buy'
-    # Check if RSI is above 65 (sell signal)
-    elif df['rsi'].iloc[-1] >= 65:
+    # Check if the last 'bars_needed' RSI values are above 65 (sell signal)
+    elif all(df['rsi'].iloc[-bars_needed:] >= 65):
         return 'sell'
     else:
         return 'hold'
 
+
 def check_open_trades(client, account_id, instrument):
     endpoint = positions.OpenPositions(account_id)
-    try:
-        response = client.request(endpoint)
-        for position in response['positions']:
-            if position['instrument'] == instrument:
-                units = int(position['long']['units']) + int(position['short']['units'])
-                if units > 0:
-                    return 'buy'
-                elif units < 0:
-                    return 'sell'
-    except V20Error as e:
-        print(f"Error retrieving open positions: {e}")
-
-    # No position found for this instrument
+    response = api_call(client, endpoint)
+    for position in response['positions']:
+        if position['instrument'] == instrument:
+            units = int(position['long']['units']) + int(position['short']['units'])
+            return 'buy' if units > 0 else 'sell'
     return None
 
-from oandapyV20.exceptions import V20Error
-from oandapyV20.endpoints.trades import TradesList
-
 def check_num_trades(client, account_id, instrument):
-    num_trades = 0
-    params = {"count": 500}  # Use maximum limit as per the API's rules
+    params = {"count": 500}
     endpoint = TradesList(account_id, params)
-    try:
-        response = client.request(endpoint)
-        trades = response['trades']
-        for trade in trades:
-            if trade['instrument'] == instrument:
-                num_trades += 1
-    except V20Error as e:
-        print(f"Error retrieving open trades: {e}")
-    return num_trades
-
-
+    response = api_call(client, endpoint)
+    return sum(trade['instrument'] == instrument for trade in response['trades'])
 
 def get_spread(client, accountID, currency):
     try:
@@ -224,9 +202,43 @@ def get_spread(client, accountID, currency):
         print(f"Error: {e}")
         return None
 
+def api_call(client, endpoint):
+    try:
+        return client.request(endpoint)
+    except V20Error as e:
+        logger.error(f"API Error: {e}")
+        raise
 
 def create_client(access_token, environment):
     return oandapyV20.API(access_token=access_token, environment=environment)
+
+def fetch_and_process_data(client, currency, accountID, lot_size, allow_trade):
+    df = get_historical_data(client, currency, 10).add_suffix('_eur')
+    
+    # Check the number of currently open positions
+    current_o_trade = check_num_trades(client, accountID, currency)
+    
+    # Calculate the number of bars needed for RSI condition based on the number of open positions
+    bars_needed = 2 + 2 * current_o_trade
+    
+    # Fetch enough historical data to check RSI condition
+    if len(df) < bars_needed:
+        df = get_historical_data(client, currency, bars_needed).add_suffix('_eur')
+    
+    action = rsi_strategy(df, bars_needed)
+    current_trade = check_open_trades(client, accountID, currency)
+
+    spread = get_spread(client, accountID, currency)
+    if spread is not None and spread < 2:
+        if action != current_trade and action in ['buy', 'sell'] and current_trade in ['buy', 'sell']:
+            close_all_positions(accountID, access_token, environment, currency)
+        
+        if current_o_trade <= allow_trade:
+            trade_signal(client, action, currency, accountID, lot_size)
+
+
+# Initialize an empty dictionary to hold the last timestamp for each currency
+last_timestamps = {}
 
 @app.task
 def run_autotrade(access_token, accountID, environment, currencies, lot_size, allow_trade):
@@ -237,24 +249,10 @@ def run_autotrade(access_token, accountID, environment, currencies, lot_size, al
     latest_timestamp = df.index[-1]
 
     if last_timestamp is None or latest_timestamp > last_timestamp:
-        for currency in currencies:
-            last_timestamp = latest_timestamp
-            df = get_historical_data(client, currency, 10).add_suffix('_eur')
-            action = rsi_strategy(df)
-
-            current_trade = check_open_trades(client, accountID, currency)
-            print(latest_timestamp, currency, current_trade)
-
-            if get_spread(client, accountID, currency) < 2:
-                print(action)
-                if action == 'sell' and current_trade == "buy":
-                    close_all_positions(accountID, access_token, environment, currency)
-                elif action == 'buy'  and current_trade == "sell":
-                    close_all_positions(accountID, access_token, environment, currency)
-                
-                current_o_trade = check_num_trades(client, accountID, currency)
-                print("no. of open trade:", current_o_trade)
-                
-                if current_o_trade <= allow_trade:
-                    trade_signal(client, action, currency, accountID, lot_size)
-
+        with ThreadPoolExecutor() as executor:
+            futures = [executor.submit(fetch_and_process_data, client, currency, accountID, lot_size, allow_trade) for currency in currencies]
+            for future in concurrent.futures.as_completed(futures):
+                try:
+                    future.result()
+                except Exception as e:
+                    logger.error(f"An error occurred: {e}")
