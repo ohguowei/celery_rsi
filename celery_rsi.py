@@ -219,22 +219,24 @@ def fetch_and_process_data(client, currency, accountID, lot_size, allow_trade):
     current_o_trade = check_num_trades(client, accountID, currency)
     
     # Calculate the number of bars needed for RSI condition based on the number of open positions
-    bars_needed = 2 + 2 * current_o_trade
+    bars_open = 2 + 2 * current_o_trade
+    bars_close = 2
     
     # Fetch enough historical data to check RSI condition
-    if len(df) < bars_needed:
-        df = get_historical_data(client, currency, bars_needed).add_suffix('_eur')
+    if len(df) < bars_open:
+        df = get_historical_data(client, currency, bars_open).add_suffix('_eur')
     
-    action = rsi_strategy(df, bars_needed)
+    action_open = rsi_strategy(df, bars_open)
+    action_close = rsi_strategy(df, bars_close)
     current_trade = check_open_trades(client, accountID, currency)
 
     spread = get_spread(client, accountID, currency)
     if spread is not None and spread < 2:
-        if action != current_trade and action in ['buy', 'sell'] and current_trade in ['buy', 'sell']:
+        if action_close != current_trade and action_close in ['buy', 'sell'] and current_trade in ['buy', 'sell']:
             close_all_positions(accountID, access_token, environment, currency)
         
-        if current_o_trade <= allow_trade:
-            trade_signal(client, action, currency, accountID, lot_size)
+        if current_o_trade <= allow_trade and action_open in ['buy', 'sell']:
+            trade_signal(client, action_open, currency, accountID, lot_size)
 
 
 # Initialize an empty dictionary to hold the last timestamp for each currency
