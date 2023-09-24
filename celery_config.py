@@ -15,16 +15,16 @@ result_serializer = 'json'
 timezone = 'Asia/Singapore'
 
 beat_schedule = {}
-# USD/CHF is 10000/12*13.5
+# USD/CHF is 11000/12*13.5
 # AUD/SGD is 10000/8*13.5
 # AUD/USD is 10000/12*13.5
 
 # Define bot configurations
 bots = [
     {"name": "bot1_AUDUSD","accountID": "001-003-255162-005","access_token": "c33734921cd0b7b68c721fc18e2019c2-8cfd11c75b7df0c81301e2cf58846540","currencies": ["AUD_USD"],"lot_size": 22500,"environment": "live","weight": 5,"profit": 100},
- #   {"name": "bot2_USDCHF","accountID": "001-003-255162-004","access_token": "c33734921cd0b7b68c721fc18e2019c2-8cfd11c75b7df0c81301e2cf58846540","currencies": ["USD_CHF"],"lot_size": 20000,"environment": "live","weight": 5,"profit": 100},
-    {"name": "bot3_AUDSGD","accountID": "001-003-255162-003","access_token": "c33734921cd0b7b68c721fc18e2019c2-8cfd11c75b7df0c81301e2cf58846540","currencies": ["AUD_SGD"],"lot_size": 11250,"environment": "live","weight": 11,"profit": 100},  
-    {"name": "botgx","accountID": "001-003-134550-004","access_token": "6ff3785ec0bf8e9d3779a70ad70437e8-90b43db3853c48c04ac9a19d395fbe08","currencies": ["AUD_SGD","AUD_USD"],"lot_size": 141,"environment": "live","weight": 11,"profit": 2.6},    
+ #   {"name": "bot2_USDCHF","accountID": "001-003-255162-004","access_token": "c33734921cd0b7b68c721fc18e2019c2-8cfd11c75b7df0c81301e2cf58846540","currencies": ["USD_CHF"],"lot_size": 24750,"environment": "live","weight": 5,"profit": 110},
+    {"name": "bot3_AUDSGD","accountID": "001-003-255162-003","access_token": "c33734921cd0b7b68c721fc18e2019c2-8cfd11c75b7df0c81301e2cf58846540","currencies": ["AUD_SGD"],"lot_size": 22500,"environment": "live","weight": 5,"profit": 100},  
+    {"name": "botgx","accountID": "001-003-134550-004","access_token": "6ff3785ec0bf8e9d3779a70ad70437e8-90b43db3853c48c04ac9a19d395fbe08","currencies": ["AUD_SGD","AUD_USD"],"lot_size": 282,"environment": "live","weight": 5,"profit": 2.5},    
 ]
 
 # Dynamically generate beat_schedule entries based on bot configurations
@@ -42,7 +42,7 @@ for bot in bots:
     }
     beat_schedule[f'run_{bot_name}_saturday'] = {
         'task': 'celery_rsi.run_autotrade',
-        'schedule': crontab(minute=0, hour='0-4', day_of_week='sat'),
+        'schedule': crontab(minute='*', hour='0-23', day_of_week='sat,sun'),
         'args': (bot["access_token"], bot["accountID"], bot["environment"], bot["currencies"], bot["lot_size"], bot["weight"]),
     }
     beat_schedule[f'{bot_name}_close_monday'] = {
@@ -57,7 +57,7 @@ for bot in bots:
     }
     beat_schedule[f'{bot_name}_close_saturday'] = {
         'task': 'celery_close.close_positions',
-        'schedule': crontab(minute='*', hour='0-5', day_of_week='sat'),
+        'schedule': crontab(minute='*', hour='0-23', day_of_week='sat,sun'),
         'args': (bot["accountID"], bot["access_token"], bot["profit"]),
     } 
 
