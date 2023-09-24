@@ -1,25 +1,23 @@
-import pandas as pd
 import time
 import warnings
+from datetime import datetime
+import logging
+import pandas as pd
+import pandas_ta as ta
 import numpy as np
 import concurrent.futures
-from oandapyV20.endpoints.pricing import PricingInfo
-import pandas_ta as ta
-from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
-from celery import Celery
-import logging
-
 import oandapyV20
 import oandapyV20.endpoints.instruments as instruments
 import oandapyV20.endpoints.positions as positions
+from oandapyV20.endpoints.pricing import PricingInfo
 from oandapyV20.endpoints.positions import PositionDetails
-from oandapyV20.endpoints.trades import TradesList
 from oandapyV20.exceptions import V20Error
 from oandapyV20.endpoints.orders import OrderCreate
 from oandapyV20.contrib.requests import PositionCloseRequest
 from oandapyV20.endpoints.trades import TradesList, TradeClose
 
+from celery import Celery
 
 # Initialize logging
 logging.basicConfig(level=logging.INFO)
@@ -35,9 +33,7 @@ def close_position(client, account_id, trade_id):
     api_call(client, close_trade_endpoint)
     logger.info(f"Successfully closed trade {trade_id}")
 
-def close_all_positions(account_id, access_token, environment, instrument_to_close):
-    # Create a client instance   
-    client = create_client(access_token, environment)
+def close_all_positions(client, account_id, instrument_to_close):
     # Get all open trades
     params = {"count": 500}  # Use maximum limit as per the API's rules
     trades_endpoint = TradesList(account_id, params)
@@ -155,18 +151,6 @@ def get_historical_data(client, instrument, count):
     df1['close'] = pd.to_numeric(df1['close'])
     return df1
 
-def rsi_strategy(df, bars_needed):
-    # Calculate RSI
-    df['rsi'] = df.ta.rsi(length=4)
-    
-    # Check if the last 'bars_needed' RSI values are below 30 (buy signal)
-    if all(df['rsi'].iloc[-bars_needed:] <= 30):
-        return 'buy'
-    # Check if the last 'bars_needed' RSI values are above 65 (sell signal)
-    elif all(df['rsi'].iloc[-bars_needed:] >= 65):
-        return 'sell'
-    else:
-        return 'hold'
 
 
 def check_open_trades(client, account_id, instrument):
@@ -212,49 +196,59 @@ def api_call(client, endpoint):
 def create_client(access_token, environment):
     return oandapyV20.API(access_token=access_token, environment=environment)
 
-def fetch_and_process_data(client, currency, accountID, lot_size, allow_trade):
-    df = get_historical_data(client, currency, 10).add_suffix('_eur')
-    
+def fetch_and_process_data(client, currency, accountID, lot_size, allow_trade): 
     # Check the number of currently open positions
     current_o_trade = check_num_trades(client, accountID, currency)
     
     # Calculate the number of bars needed for RSI condition based on the number of open positions
-    bars_open = 2 + 2 * current_o_trade
+    bars_open = 2 + 2 * current_o_trade  
     bars_close = 2
-    
     # Fetch enough historical data to check RSI condition
-    if len(df) < bars_open:
-        df = get_historical_data(client, currency, bars_open).add_suffix('_eur')
+    df = get_historical_data(client, currency, 100).add_suffix('_eur')
     
-    action_open = rsi_strategy(df, bars_open)
-    action_close = rsi_strategy(df, bars_close)
+    action_open,action_close = rsi_strategy(df, bars_open, bars_close)
     current_trade = check_open_trades(client, accountID, currency)
 
     spread = get_spread(client, accountID, currency)
     if spread is not None and spread < 2:
         if action_close != current_trade and action_close in ['buy', 'sell'] and current_trade in ['buy', 'sell']:
-            close_all_positions(accountID, access_token, environment, currency)
-        
+          print("closeall")
+          close_all_positions(client,accountID,currency)
         if current_o_trade <= allow_trade and action_open in ['buy', 'sell']:
-            trade_signal(client, action_open, currency, accountID, lot_size)
+          print("opentrade")
+          trade_signal(client, action_open, currency, accountID, lot_size)
 
+def rsi_strategy(df, bars_open_needed,bars_close_needed):
+    # Calculate RSI
+    df['rsi'] = df.ta.rsi(length=4)
+    # Check if the last 'bars_needed' RSI values are below 30 (buy signal)
+    if all(df['rsi'].iloc[-bars_open_needed:] <= 30):
+        action_open = 'buy'
+    # Check if the last 'bars_needed' RSI values are above 65 (sell signal)
+    elif all(df['rsi'].iloc[-bars_open_needed:] >= 65):
+        action_open = 'sell'
+    else:
+        action_open = 'hold'
 
-# Initialize an empty dictionary to hold the last timestamp for each currency
-last_timestamps = {}
+    # Check if the last 'bars_needed' RSI values are below 30 (buy signal)
+    if all(df['rsi'].iloc[-bars_close_needed:] <= 30):
+        action_close = 'buy'
+    # Check if the last 'bars_needed' RSI values are above 65 (sell signal)
+    elif all(df['rsi'].iloc[-bars_close_needed:] >= 65):
+        action_close = 'sell'
+    else:
+        action_close = 'hold'
+
+    return action_open, action_close
 
 @app.task
 def run_autotrade(access_token, accountID, environment, currencies, lot_size, allow_trade):
     client = create_client(access_token, environment)
-    last_timestamp = None
 
-    df = get_historical_data(client, "EUR_USD", 10).add_suffix('_eur')
-    latest_timestamp = df.index[-1]
-
-    if last_timestamp is None or latest_timestamp > last_timestamp:
-        with ThreadPoolExecutor() as executor:
-            futures = [executor.submit(fetch_and_process_data, client, currency, accountID, lot_size, allow_trade) for currency in currencies]
-            for future in concurrent.futures.as_completed(futures):
-                try:
-                    future.result()
-                except Exception as e:
-                    logger.error(f"An error occurred: {e}")
+    with ThreadPoolExecutor() as executor:
+      futures = [executor.submit(fetch_and_process_data, client, currency, accountID, lot_size, allow_trade) for currency in currencies]
+      for future in concurrent.futures.as_completed(futures):
+        try:
+          future.result()
+        except Exception as e:
+          logger.error(f"An error occurred: {e}")
