@@ -212,12 +212,12 @@ def fetch_and_process_data(client, currency, accountID, lot_size, allow_trade):
     spread = get_spread(client, accountID, currency)
     if spread is not None and spread < 2:
         if action_close != current_trade and action_close in ['buy', 'sell'] and current_trade in ['buy', 'sell']:
-          print("closeall")
+          #print("closeall")
           close_all_positions(client,accountID,currency)
           current_o_trade = 0
           action_open = action_close
         if current_o_trade <= allow_trade and action_open in ['buy', 'sell']:
-          print("opentrade")
+          #print("opentrade")
           trade_signal(client, action_open, currency, accountID, lot_size)
 
 def rsi_strategy(df, bars_open_needed,bars_close_needed):
