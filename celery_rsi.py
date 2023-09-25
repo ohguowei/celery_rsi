@@ -214,6 +214,8 @@ def fetch_and_process_data(client, currency, accountID, lot_size, allow_trade):
         if action_close != current_trade and action_close in ['buy', 'sell'] and current_trade in ['buy', 'sell']:
           print("closeall")
           close_all_positions(client,accountID,currency)
+          current_o_trade = 0
+          action_open = action_close
         if current_o_trade <= allow_trade and action_open in ['buy', 'sell']:
           print("opentrade")
           trade_signal(client, action_open, currency, accountID, lot_size)
