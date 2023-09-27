@@ -210,7 +210,7 @@ def fetch_and_process_data(client, currency, accountID, lot_size, allow_trade):
     current_trade = check_open_trades(client, accountID, currency)
 
     spread = get_spread(client, accountID, currency)
-    if spread is not None and spread < 2:
+    if spread is not None and spread < 2.2:
         if action_close != current_trade and action_close in ['buy', 'sell'] and current_trade in ['buy', 'sell']:
           #print("closeall")
           close_all_positions(client,accountID,currency)
