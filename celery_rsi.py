@@ -201,8 +201,8 @@ def fetch_and_process_data(client, currency, accountID, lot_size, allow_trade):
     current_o_trade = check_num_trades(client, accountID, currency)
     
     # Calculate the number of bars needed for RSI condition based on the number of open positions
-    bars_open = 2 + 2 * current_o_trade  
-    bars_close = 2
+    bars_open = 2
+    bars_close = 1
     # Fetch enough historical data to check RSI condition
     df = get_historical_data(client, currency, 100).add_suffix('_eur')
     
