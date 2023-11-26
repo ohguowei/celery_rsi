@@ -57,7 +57,7 @@ for bot in bots:
     }
     beat_schedule[f'{bot_name}_close_saturday'] = {
         'task': 'celery_close.close_positions',
-        'schedule': crontab(minute='*', hour='0-23', day_of_week='sat'),
+        'schedule': crontab(minute='*', hour='0-5', day_of_week='sat'),
         'args': (bot["accountID"], bot["access_token"], bot["profit"]),
     } 
 
